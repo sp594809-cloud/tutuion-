@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: tutuion
+    env: node
+    plan: free
+    branch: main
+    # Install + build
+    buildCommand: "npm ci && npm run build"
+    # Render will provide $PORT at runtime — Nitro will read process.env.PORT
+    startCommand: "node .output/server/index.mjs"
+    autoDeploy: true
+    envVars:
+      - key: HOST
+        value: "0.0.0.0"
+      - key: NODE_ENV
+        value: "production"
+    # Do NOT include DATABASE_URL here; add it in the Render dashboard as a secret
