@@ -170,7 +170,10 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "vercel",
+            // Use the Node preset so Nitro emits a single Node server at
+            // .output/server/index.mjs suitable for Render. This preserves
+            // Vercel support via nitro.config.ts or conditional overrides.
+            preset: "node",
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
