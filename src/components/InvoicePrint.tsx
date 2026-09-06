@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function InvoicePrint({ invoiceNumber, date, studentName, items, subtotal, tax, total }: any) {
+export function InvoicePrint({ invoiceNumber, date, studentName, items, subtotal, paymentMode, transactionId, amountPaid, balance }: any) {
   return (
     <div style={{ fontFamily: 'Inter, system-ui, -apple-system, Roboto, Arial', color: '#111' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
@@ -10,14 +10,14 @@ export function InvoicePrint({ invoiceNumber, date, studentName, items, subtotal
           <div>Contact: +91-XXXXXXXXXX</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, color: '#666' }}>Invoice</div>
+          <div style={{ fontSize: 12, color: '#666' }}>Receipt</div>
           <div style={{ fontWeight: 700 }}>{invoiceNumber}</div>
           <div style={{ fontSize: 12, color: '#666' }}>{date}</div>
         </div>
       </header>
 
       <section style={{ marginBottom: 16 }}>
-        <strong>Bill To:</strong>
+        <strong>Received From:</strong>
         <div>{studentName || '— Student Name —'}</div>
       </section>
 
@@ -42,23 +42,34 @@ export function InvoicePrint({ invoiceNumber, date, studentName, items, subtotal
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={3} style={{ textAlign: 'right', padding: 8 }}>Subtotal</td>
+            <td colSpan={3} style={{ textAlign: 'right', padding: 8 }}>Total Amount</td>
             <td style={{ padding: 8 }}>₹{subtotal.toFixed(2)}</td>
           </tr>
           <tr>
-            <td colSpan={3} style={{ textAlign: 'right', padding: 8 }}>Tax (18%)</td>
-            <td style={{ padding: 8 }}>₹{tax.toFixed(2)}</td>
+            <td colSpan={3} style={{ textAlign: 'right', padding: 8 }}>Amount Paid</td>
+            <td style={{ padding: 8 }}>₹{Number(amountPaid).toFixed(2)}</td>
           </tr>
           <tr>
-            <td colSpan={3} style={{ textAlign: 'right', padding: 8, fontWeight: 700 }}>Total</td>
-            <td style={{ padding: 8, fontWeight: 700 }}>₹{total.toFixed(2)}</td>
+            <td colSpan={3} style={{ textAlign: 'right', padding: 8, fontWeight: 700 }}>Balance</td>
+            <td style={{ padding: 8, fontWeight: 700 }}>₹{Number(balance).toFixed(2)}</td>
           </tr>
         </tfoot>
       </table>
 
-      <footer style={{ marginTop: 18, fontSize: 12, color: '#666' }}>
-        <div>Bank details / UPI: provide here if you want to accept payments</div>
-        <div style={{ marginTop: 8 }}>Thank you for trusting TuitionEasy.</div>
+      <section style={{ marginTop: 18 }}>
+        <div><strong>Payment Mode:</strong> {paymentMode}</div>
+        {transactionId ? <div><strong>Transaction / UPI ID:</strong> {transactionId}</div> : null}
+      </section>
+
+      <footer style={{ marginTop: 18, fontSize: 12, color: '#666', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div>Note: This is a receipt for fee payment. No GST applied.</div>
+          <div style={{ marginTop: 8 }}>For queries contact: +91-XXXXXXXXXX</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ borderTop: '1px solid #ddd', width: 200, marginTop: 24 }}></div>
+          <div style={{ fontSize: 12 }}>Teacher Signature</div>
+        </div>
       </footer>
     </div>
   );

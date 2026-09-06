@@ -87,127 +87,73 @@ export const syncAttendanceToDb = createServerFn({ method: "POST" })
     }
   });
 
-export const syncMarksToDb = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      rows: Array<{
-        id: string;
-        studentId: string;
-        testName: string;
-        subject: string;
-        score: number;
-        maxScore: number;
-        date: string;
-      }>;
-    }) => data,
-  )
+// --- Receipts / Receipt items server functions ---
+
+export const syncReceiptToDb = createServerFn({ method: "POST" })
+  .validator((data: any) => data)
   .handler(async ({ data }) => {
     try {
       const sql = await getSql();
-      for (const r of data.rows) {
-        await sql`
-          INSERT INTO marks (id, student_id, test_name, subject, score, max_score, date)
-          VALUES (${r.id}, ${r.studentId}, ${r.testName}, ${r.subject}, ${r.score}, ${r.maxScore}, ${r.date})
-          ON CONFLICT (id) DO UPDATE SET score = EXCLUDED.score
-        `;
+      // Upsert receipt
+      await sql`
+        INSERT INTO receipts (id, receipt_number, student_name, student_id, date, payment_mode, transaction_id, amount_paid, balance, subtotal, metadata)
+        VALUES (
+          ${data.id},
+          ${data.receiptNumber},
+          ${data.studentName},
+          ${data.studentId || null},
+          ${data.date},
+          ${data.paymentMode},
+          ${data.transactionId || null},
+          ${data.amountPaid},
+          ${data.balance},
+          ${data.subtotal},
+          ${JSON.stringify(data.metadata || {})}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          receipt_number = EXCLUDED.receipt_number,
+          student_name = EXCLUDED.student_name,
+          student_id = EXCLUDED.student_id,
+          date = EXCLUDED.date,
+          payment_mode = EXCLUDED.payment_mode,
+          transaction_id = EXCLUDED.transaction_id,
+          amount_paid = EXCLUDED.amount_paid,
+          balance = EXCLUDED.balance,
+          subtotal = EXCLUDED.subtotal,
+          metadata = EXCLUDED.metadata
+      `;
+
+      // Replace items: delete existing then insert provided
+      await sql`DELETE FROM receipt_items WHERE receipt_id = ${data.id}`;
+      if (Array.isArray(data.items)) {
+        for (const it of data.items) {
+          await sql`
+            INSERT INTO receipt_items (receipt_id, description, qty, price, amount)
+            VALUES (${data.id}, ${it.desc || it.description}, ${it.qty || 1}, ${it.price || 0}, ${(it.qty || 1) * (it.price || 0)})
+          `;
+        }
       }
+
       return { success: true };
     } catch (err) {
-      console.error("[syncMarksToDb] Error:", err);
+      console.error("[syncReceiptToDb] Error:", err);
       return { success: false, error: String(err) };
     }
   });
 
-export const syncPaymentToDb = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      id: string;
-      studentId: string;
-      amount: number;
-      status: string;
-      dueDate: string;
-      paidDate: string | null;
-      invoiceNo: string;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const sql = await getSql();
-      await sql`
-        INSERT INTO fee_payments (id, student_id, amount, status, due_date, paid_date, invoice_no)
-        VALUES (${data.id}, ${data.studentId}, ${data.amount}, ${data.status}, ${data.dueDate}, ${data.paidDate}, ${data.invoiceNo})
-        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, paid_date = EXCLUDED.paid_date
-      `;
-      return { success: true };
-    } catch (err) {
-      console.error("[syncPaymentToDb] Error:", err);
-      return { success: false, error: String(err) };
-    }
-  });
-
-export const syncTeacherToDb = createServerFn({ method: "POST" })
-  .validator((data: TeacherProfile) => data)
-  .handler(async ({ data }) => {
-    try {
-      const sql = await getSql();
-      await sql`
-        INSERT INTO teachers (id, name, tuition_name, phone, email, subjects)
-        VALUES (${data.id}, ${data.name}, ${data.instituteName}, ${data.phone}, ${data.email}, ${JSON.stringify(data.subjects)})
-        ON CONFLICT (id) DO UPDATE SET
-          name = EXCLUDED.name,
-          tuition_name = EXCLUDED.tuition_name,
-          phone = EXCLUDED.phone,
-          email = EXCLUDED.email,
-          subjects = EXCLUDED.subjects
-      `;
-      return { success: true };
-    } catch (err) {
-      console.error("[syncTeacherToDb] Error:", err);
-      return { success: false, error: String(err) };
-    }
-  });
-
-export const syncPaperToDb = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      id: string;
-      title: string;
-      subject: string;
-      batchId: string;
-      fileUrl: string;
-      notes?: string;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    try {
-      const sql = await getSql();
-      await sql`
-        INSERT INTO question_papers (id, title, subject, batch, file_url, notes)
-        VALUES (${data.id}, ${data.title}, ${data.subject}, ${data.batchId}, ${data.fileUrl}, ${data.notes || null})
-        ON CONFLICT (id) DO UPDATE SET
-          title = EXCLUDED.title,
-          subject = EXCLUDED.subject,
-          batch = EXCLUDED.batch,
-          file_url = EXCLUDED.file_url,
-          notes = EXCLUDED.notes
-      `;
-      return { success: true };
-    } catch (err) {
-      console.error("[syncPaperToDb] Error:", err);
-      return { success: false, error: String(err) };
-    }
-  });
-
-export const deletePaperFromDb = createServerFn({ method: "POST" })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
-    try {
-      const sql = await getSql();
-      await sql`DELETE FROM question_papers WHERE id = ${data.id}`;
-      return { success: true };
-    } catch (err) {
-      console.error("[deletePaperFromDb] Error:", err);
-      return { success: false, error: String(err) };
-    }
-  });
-
+export const fetchReceiptsFromDb = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const sql = await getSql();
+    const rows = await sql<any>`
+      SELECT r.*, COALESCE(json_agg(json_build_object('description', ri.description, 'qty', ri.qty, 'price', ri.price, 'amount', ri.amount)) FILTER (WHERE ri.id IS NOT NULL), '[]') AS items
+      FROM receipts r
+      LEFT JOIN receipt_items ri ON ri.receipt_id = r.id
+      GROUP BY r.id
+      ORDER BY r.created_at DESC
+    `;
+    return { success: true, receipts: rows };
+  } catch (err) {
+    console.error("[fetchReceiptsFromDb] Error:", err);
+    return { success: false, receipts: [] };
+  }
+});

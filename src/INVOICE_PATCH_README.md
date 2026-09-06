@@ -1,24 +1,20 @@
-# Invoice and Export System
+# Invoice and Receipt System (Updated)
 
-This patch adds a lightweight invoice creation/print system and a student performance export/charting UI.
+This patch updates the previous invoice UI into a tuition receipt system (no GST), tailored for small tuitions.
 
-Files added:
-- src/routes/invoices.tsx — New route (Invoices & Reports)
-- src/components/InvoiceEditor.tsx — Invoice editor, save, preview/print
-- src/components/InvoicePrint.tsx — Printable invoice layout (nice bill format)
-- src/components/ExportMarks.tsx — Export CSV, download chart, leaderboard
-- src/components/BarChart.tsx — Small SVG bar chart component
-- public/manifest.webmanifest — (left in place from earlier patch) not modified here
-- public/icons/README.md — icons instructions (if missing)
+Changes made:
+- Replaced "Invoice" semantics with "Receipt" (Receipt number, Payment mode, Transaction/UPI ID, Amount Paid, Balance)
+- Removed tax/GST calculation — receipts show total amount, amount paid, and balance
+- Save receipts to localStorage under `tuition_receipts` (for demo/demo-only persistence)
+- Printable receipt template updated with signature area and a clear "No GST" note
 
-Persistence: invoices and sample students are saved to localStorage. For production, wire these components to your server APIs / database.
+Files updated:
+- src/components/InvoiceEditor.tsx — now saves receipts and collects payment mode/txn id/amount paid
+- src/components/InvoicePrint.tsx — printable receipt format
+- src/INVOICE_PATCH_README.md updated previously to note receipts
 
-How to use:
-- Visit /invoices in the app (please add route to app's navigation if needed).
-- Create invoices and preview/print them (PDF via print dialog).
-- Export student marks as CSV and download chart image; view leaderboard.
+Next steps (recommended):
+- Persist receipts to backend DB and secure endpoints
+- Add emailing (send receipt PDF to parent) and SMS notifications for payments
+- Add UPI QR generation for receipts if you want the printed receipt to show a QR for instant payment
 
-Next recommended steps:
-- Wire student data and invoices to your backend (APIs) to persist across devices.
-- Add authentication/authorization checks to ensure only teachers access invoices.
-- Add email/SMS sending for invoice sharing (use a server function or 3rd-party provider).
