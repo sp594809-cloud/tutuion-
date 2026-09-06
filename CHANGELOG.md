@@ -1,1 +1,1 @@
-chore(ui): add Receipts tab to shell, add receipts list and send action
+Add JWT auth server functions: login, logout, getCurrentUser (uses bcryptjs + jose).
