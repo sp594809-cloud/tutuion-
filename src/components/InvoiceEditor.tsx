@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { InvoicePrint } from './InvoicePrint';
+import { syncReceiptToDb } from '@/lib/server-db';
 
 export function InvoiceEditor() {
   const [studentName, setStudentName] = useState('');
@@ -40,13 +41,32 @@ export function InvoiceEditor() {
     w.document.close();
   }
 
-  // Save receipt to localStorage (basic persistence)
-  function saveReceipt() {
+  // Save receipt to Neon DB (server)
+  async function saveReceipt() {
     try {
-      const saved = JSON.parse(localStorage.getItem('tuition_receipts') || '[]');
-      saved.push({ receiptNumber, date, studentName, items, subtotal, paymentMode, transactionId, amountPaid, balance });
-      localStorage.setItem('tuition_receipts', JSON.stringify(saved));
-      alert('Receipt saved locally. You can find it in localStorage for now.');
+      const id = `rcpt_${Date.now()}`;
+      const payload = {
+        id,
+        receiptNumber,
+        date: new Date().toISOString().slice(0,10),
+        studentName,
+        items,
+        subtotal,
+        paymentMode,
+        transactionId,
+        amountPaid,
+        balance,
+        subtotal,
+        metadata: {},
+      };
+      const res = await syncReceiptToDb({ data: payload });
+      if (res && (res as any).success) {
+        alert('Receipt saved to Neon DB');
+        // Optionally refresh receipts list via event or state
+      } else {
+        console.error(res);
+        alert('Failed to save receipt to DB');
+      }
     } catch (e) {
       console.error(e);
       alert('Save failed');
