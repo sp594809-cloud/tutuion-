@@ -1,0 +1,1 @@
+chore(ui): add Receipts tab to shell, add receipts list and send action
