@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, FileText, Plus, Share2, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, Plus, Share2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button, Card, Field, Input, Select } from "@/components/ui";
 import { useTuition } from "@/lib/store";
-import { syncPaperToDb, deletePaperFromDb } from "@/lib/server-db";
+import { syncPaperToDb } from "@/lib/server-db";
 import { getWhatsAppLink, prettyDate, uid } from "@/lib/utils";
 
 export const Route = createFileRoute("/papers")({ component: PapersPage });
@@ -91,12 +91,6 @@ export function PapersPage() {
     setFileUrl("");
     setNotes("");
     setShowAddForm(false);
-  }
-
-  function handleDeletePaper(id: string) {
-    if (!confirm("Are you sure you want to delete this paper?")) return;
-    setPapers((prev) => prev.filter((p) => p.id !== id));
-    void deletePaperFromDb({ data: { id } });
   }
 
   function handleShareWhatsApp(paper: PaperItem) {
@@ -233,14 +227,6 @@ export function PapersPage() {
                     <p className="text-[10px] text-subtle">Added: {prettyDate(paper.createdAt)}</p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePaper(paper.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Delete Paper"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
                 </div>
 
                 <div className="flex items-center gap-2 pt-2 border-t border-border/60">
