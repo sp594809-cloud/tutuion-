@@ -4,12 +4,14 @@ import { InvoicePrint } from './InvoicePrint';
 export function InvoiceEditor() {
   const [studentName, setStudentName] = useState('');
   const [items, setItems] = useState([{ desc: 'Tuition Fee', qty: 1, price: 500 }]);
-  const [invoiceNumber, setInvoiceNumber] = useState(() => `INV-${Date.now()}`);
+  const [receiptNumber, setReceiptNumber] = useState(() => `RCPT-${Date.now()}`);
   const [date] = useState(() => new Date().toLocaleDateString());
+  const [paymentMode, setPaymentMode] = useState('Cash');
+  const [transactionId, setTransactionId] = useState('');
+  const [amountPaid, setAmountPaid] = useState(0);
 
   const subtotal = useMemo(() => items.reduce((s, it) => s + (it.qty || 0) * (it.price || 0), 0), [items]);
-  const tax = useMemo(() => Math.round(subtotal * 0.18), [subtotal]);
-  const total = subtotal + tax;
+  const balance = useMemo(() => Math.max(0, subtotal - (Number(amountPaid) || 0)), [subtotal, amountPaid]);
 
   function updateItem(index, key, value) {
     const next = items.slice();
@@ -29,7 +31,7 @@ export function InvoiceEditor() {
     const invoiceHtml = document.getElementById('invoice-print')?.outerHTML ?? '';
     const w = window.open('', '_blank');
     if (!w) return alert('Popup blocked');
-    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Invoice</title>');
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title>');
     w.document.write('<style>body{font-family:Inter, system-ui, -apple-system, Roboto, Arial; padding:20px} table{width:100%;border-collapse:collapse} th,td{padding:8px;border:1px solid #ddd;text-align:left} .right{text-align:right} .no-border{border:none}</style>');
     w.document.write('</head><body>');
     w.document.write(invoiceHtml);
@@ -38,13 +40,13 @@ export function InvoiceEditor() {
     w.document.close();
   }
 
-  // Save invoice to localStorage (basic persistence)
-  function saveInvoice() {
+  // Save receipt to localStorage (basic persistence)
+  function saveReceipt() {
     try {
-      const saved = JSON.parse(localStorage.getItem('tuition_invoices' ) || '[]');
-      saved.push({ invoiceNumber, date, studentName, items, subtotal, tax, total });
-      localStorage.setItem('tuition_invoices', JSON.stringify(saved));
-      alert('Invoice saved locally. You can find it in localStorage for now.');
+      const saved = JSON.parse(localStorage.getItem('tuition_receipts') || '[]');
+      saved.push({ receiptNumber, date, studentName, items, subtotal, paymentMode, transactionId, amountPaid, balance });
+      localStorage.setItem('tuition_receipts', JSON.stringify(saved));
+      alert('Receipt saved locally. You can find it in localStorage for now.');
     } catch (e) {
       console.error(e);
       alert('Save failed');
@@ -53,11 +55,11 @@ export function InvoiceEditor() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <label style={{ minWidth: 120 }}>Student name</label>
         <input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="Name" />
-        <label style={{ minWidth: 120 }}>Invoice #</label>
-        <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+        <label style={{ minWidth: 120 }}>Receipt #</label>
+        <input value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} />
         <label style={{ minWidth: 40 }}>Date</label>
         <input value={date} readOnly />
       </div>
@@ -95,19 +97,45 @@ export function InvoiceEditor() {
       </div>
 
       <div style={{ marginTop: 12, textAlign: 'right' }}>
-        <div>Subtotal: ₹{subtotal.toFixed(2)}</div>
-        <div>Tax (18%): ₹{tax.toFixed(2)}</div>
-        <div style={{ fontWeight: 'bold' }}>Total: ₹{total.toFixed(2)}</div>
+        <div>Amount Due: ₹{subtotal.toFixed(2)}</div>
+        <div style={{ marginTop: 8 }}>
+          <label style={{ marginRight: 8 }}>Payment mode</label>
+          <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
+            <option>Cash</option>
+            <option>UPI</option>
+            <option>Bank Transfer</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <label style={{ marginRight: 8 }}>Transaction / UPI ID (optional)</label>
+          <input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} placeholder="Txn / UPI ID" />
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <label style={{ marginRight: 8 }}>Amount Paid (₹)</label>
+          <input type="number" value={amountPaid} onChange={(e) => setAmountPaid(Number(e.target.value))} style={{ width: 160 }} />
+        </div>
+        <div style={{ fontWeight: 'bold', marginTop: 8 }}>Balance: ₹{balance.toFixed(2)}</div>
       </div>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <button onClick={previewAndPrint}>Preview & Print (PDF)</button>
-        <button onClick={saveInvoice}>Save Invoice</button>
+        <button onClick={previewAndPrint}>Preview & Print Receipt</button>
+        <button onClick={saveReceipt}>Save Receipt</button>
       </div>
 
       <div style={{ marginTop: 20 }} aria-hidden>
         <div id="invoice-print" style={{ maxWidth: 800, margin: '0 auto', padding: 20, border: '1px solid #eee' }}>
-          <InvoicePrint invoiceNumber={invoiceNumber} date={date} studentName={studentName} items={items} subtotal={subtotal} tax={tax} total={total} />
+          <InvoicePrint
+            invoiceNumber={receiptNumber}
+            date={date}
+            studentName={studentName}
+            items={items}
+            subtotal={subtotal}
+            paymentMode={paymentMode}
+            transactionId={transactionId}
+            amountPaid={amountPaid}
+            balance={balance}
+          />
         </div>
       </div>
     </div>
